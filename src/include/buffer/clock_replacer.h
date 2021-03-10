@@ -46,7 +46,11 @@ class ClockReplacer : public Replacer {
   size_t Size() override;
 
  private:
-  // TODO(student): implement me!
+  int clock_pointer = 0;
+  int victimized_size = 0;
+  std::vector<bool> pins_states;
+  std::vector<bool> access_states;
+  std::mutex lock;
 };
 
 }  // namespace bustub
