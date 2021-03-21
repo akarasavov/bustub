@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <include/common/logger.h>
 #include <list>
 #include <mutex>  // NOLINT
 #include <unordered_map>
@@ -151,6 +152,54 @@ class BufferPoolManager {
    * Flushes all the pages in the buffer pool to disk.
    */
   void FlushAllPagesImpl();
+
+ private:
+  /**
+   * Helper methods
+   * */
+  bool isAllPined() {
+    for (size_t frame_id = 0; frame_id < GetPoolSize(); frame_id++) {
+      Page *page = getPageByFrameId(frame_id);
+      if (page->pin_count_ <= 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  std::optional<frame_id_t> getFrameId(page_id_t page_id) {
+    auto entity = page_table_.find(page_id);
+    if (entity == page_table_.end()) {
+      return std::nullopt;
+    }
+
+    frame_id_t frame_id = page_table_.at(page_id);
+    return frame_id;
+  }
+
+  frame_id_t pickVictimPage() {
+    if (!free_list_.empty()) {
+      int frame_id_t = free_list_.front();
+      free_list_.pop_front();
+
+      return frame_id_t;
+    }
+    frame_id_t frame_id;
+    if (!replacer_->Victim(&frame_id)) {
+      return -1;
+    }
+    Page *victimPage = getPageByFrameId(frame_id);
+    LOG_DEBUG("Page with id %d is dirty %d", victimPage->GetPageId(), victimPage->IsDirty());
+
+    if (victimPage->IsDirty()) {
+      FlushPageImpl(victimPage->GetPageId());
+    }
+
+    page_table_.erase(victimPage->GetPageId());
+    return frame_id;
+  }
+
+  Page *getPageByFrameId(frame_id_t frame_id) { return GetPages() + frame_id; }
 
   /** Number of pages in the buffer pool. */
   size_t pool_size_;
