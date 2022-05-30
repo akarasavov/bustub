@@ -36,7 +36,7 @@ BufferPoolManager::~BufferPoolManager() {
 }
 
 Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   const auto frame_id_op = getFrameId(page_id);
   if (frame_id_op.has_value()) {
@@ -71,7 +71,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
 }
 
 bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   std::optional<frame_id_t> frame_id = getFrameId(page_id);
   if (!frame_id.has_value()) {
@@ -89,7 +89,7 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
 }
 
 bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   std::optional<frame_id_t> frame_id = getFrameId(page_id);
   if (!frame_id.has_value()) {
@@ -109,7 +109,7 @@ bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
 }
 
 Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   if (isAllPined()) {
     return nullptr;
@@ -141,7 +141,7 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
 }
 
 bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   const auto frame_id = getFrameId(page_id);
   if (!frame_id.has_value()) {
@@ -165,7 +165,7 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
 }
 
 void BufferPoolManager::FlushAllPagesImpl() {
-  std::lock_guard<std::mutex> guard(latch_);
+  std::lock_guard<std::recursive_mutex> guard(latch_);
 
   for (const auto pair : page_table_) {
     FlushPageImpl(pair.first);
